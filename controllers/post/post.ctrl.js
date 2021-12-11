@@ -1,30 +1,13 @@
 "use strict";
-const { db } = require("../../models/index");
-
+const { Post } = require("../../models");
+const {Op} = require("sequelize")
 
 const putUpPosts = async (req, res) => {
     const completed = 0;
     const userId = res.locals.user.userId;
     try {
       const {meetingDate,wishDesc,locationCategory, dogCount,totalTime,startLocationAddress,endLocationAddress,totalDistance,routeColor,routeName} = req.body;
-      console.log(meetingDate)
-      const params= [
-        meetingDate,
-        wishDesc,
-        completed,
-        locationCategory,
-        dogCount,
-        totalTime,
-        startLocationAddress,
-        endLocationAddress,
-        totalDistance,
-        routeColor,
-        routeName,
-        userId,
-      ];
-      const query =
-      'INSERT INTO post (meetingDate,wishDesc,completed,locationCategory,dogCount,totalTime,startLocationAddress,endLocationAddress,totalDistance,routeColor,routeName, userId) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)';
-        await db.query(query, params, (error, rows, fields) => {
+        await Post.create({meetingDate,wishDesc,locationCategory, dogCount,totalTime,startLocationAddress,endLocationAddress,totalDistance,routeColor,routeName,userId,completed}, (error, rows, fields) => {
           console.log("row는",rows)
           if (error) {
             console.log(error)

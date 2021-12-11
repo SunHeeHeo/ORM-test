@@ -2,19 +2,17 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const setRounds = 10;
-const { db } = require("../../models/index");
+const { User } = require("../../models");
+const {Op} = require("sequelize")
 
 
 const loginUser = async (req, res) => {
     const { userEmail, password } = req.body;
-    let users;
-    const post = `SELECT * FROM user WHERE userEmail = ?`;
-    const results = await db.query(post, [userEmail]);
-    // console.log("results", results[0].userEmail);
-    users = results[0];
+    const users = await User.findOne({userEmail:userEmail})
+    console.log("users",users.password)
     if (users) {
       // 유저가 존재한다면? (이미 가입했다면)
-      const hash = results[0].password;
+      const hash = users.password;
       if (bcrypt.compareSync(password, hash)) {
         const token = jwt.sign(
           {
@@ -41,9 +39,9 @@ const loginUser = async (req, res) => {
 };
 
 
-const postUser = (req, res) => {
+const postUser = async (req, res) => {
     console.log("회원가입 들어오니?")
-    const { userEmail, password, confirmPassword, userNickname, userGender, userAge,userLocation} = req.body;
+    let { userEmail, password, confirmPassword, userNickname, userGender, userAge,userLocation} = req.body;
   
     // console.log("req.file", req.file)
     const userImage =   req.file.transforms[0].location; 
@@ -51,21 +49,15 @@ const postUser = (req, res) => {
     console.log("userImage", userImage)
   
     const salt =  bcrypt.genSaltSync(setRounds);
-    const hashPassword = bcrypt.hashSync(password, salt);
-    const userParams = [userEmail, hashPassword, userNickname, userGender, userAge, userImage,userLocation];
-    const post =
-      "INSERT INTO user (userEmail, password, userNickname, userGender, userAge, userImage, userLocation) VALUES (?, ?, ? , ?, ?, ?, ?);";
-    db.query(post, userParams, (error, results, fields) => {
-      // db.query(쿼리문, 넣을 값, 콜백)
-      if (error) {
-        console.log("저장", error)
-        res.status(401).send(error);
-        console.log(error);
-      } else {
-        console.log("누군가가 회원가입을 했습니다.");
-        res.send({ results: "완료" });
-        }
-      });
+    const hashpassword = bcrypt.hashSync(password, salt);
+    try {
+    await User.create({userEmail, password:hashpassword, userNickname, userGender, userAge, userImage, userLocation});
+    res.send({ result: '완료' });
+    } catch (err) {
+      console.log("저장", error)
+      res.status(401).send(error);
+      console.log(error);
+    }
 };
 
 const checkDup = async (req, res) => {
@@ -91,24 +83,19 @@ function idCheck(idGive) {
 
 function emailExist(userEmail) {
   return new Promise((resolve, reject) => {
-    const query = `select userEmail from user where user.userEmail = ?`;
-    const params = [userEmail];
-    db.query(query, params, (error, results, fields) => {
-      console.log(results);
-      if (error) {
-        // logger.error(`Msg: raise Error in checkValidationEmail => ${error}`);
-        console.log(error);
-        return resolve(false);
+    try {
+    User.findAll({
+      where: {
+        [Op] : [{userEmail}],
       }
-      // 아무 값이 없기 때문에, 중복이 없다.2 (가능 하다는 얘기)
-      if (results.length == 0) {
-        return resolve(true);
-      }
-
-      // 존재하다면, 이메일 중복으로 인지
-      resolve(false);
-    });
-  });
+    }) 
+    res.send({ result: '완료' });
+  }catch (err) {
+    console.log("저장", error)
+    res.status(401).send(error);
+    console.log(error);
+  } 
+  })
 }
 
 async function nicknameExist(nickGive) {
